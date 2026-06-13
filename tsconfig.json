@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext", "module": "ESNext", "moduleResolution": "bundler",
+    "strict": true, "noUncheckedIndexedAccess": true, "noImplicitOverride": true,
+    "verbatimModuleSyntax": true, "skipLibCheck": true, "esModuleInterop": true,
+    "resolveJsonModule": true, "allowImportingTsExtensions": true, "noEmit": true,
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["vitest/globals", "vite/client", "node"],
+    "paths": { "@windows-explorer/contracts": ["./src/contracts.ts"] }
+  },
+  "include": ["src", "vite.config.ts"]
+}
