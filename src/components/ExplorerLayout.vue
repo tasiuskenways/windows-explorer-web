@@ -77,11 +77,8 @@ const toggleTheme = () => document.documentElement.classList.toggle("dark");
 
 <style scoped>
 .nav-pane {
-  background: var(--nav-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px 0 0 8px;
-  overflow: auto;
-  padding: 6px 6px 12px;
+  display: flex;
+  min-height: 0;
   flex-shrink: 0;
 }
 </style>

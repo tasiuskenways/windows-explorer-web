@@ -11,11 +11,11 @@
   --text: #1a1a1a;
   --text-dim: #5f5f5f;
   --border: #e3e3e3;
-  --hover: rgba(0,0,0,0.045);
+  --hover: rgba(0, 0, 0, 0.045);
   --selected: #e8e8e8;
   --row-h: 30px;
   --chevron: #5f5f5f;
-  --shadow: 0 18px 50px rgba(0,0,0,0.28), 0 3px 10px rgba(0,0,0,0.18);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.28), 0 3px 10px rgba(0, 0, 0, 0.18);
 }
 html.dark {
   --accent: #4cc2ff;
@@ -27,13 +27,28 @@ html.dark {
   --text: #ffffff;
   --text-dim: #a5a5a5;
   --border: #1c1c1c;
-  --hover: rgba(255,255,255,0.05);
+  --hover: rgba(255, 255, 255, 0.05);
   --selected: #383838;
   --chevron: #c5c5c5;
-  --shadow: 0 18px 60px rgba(0,0,0,0.6), 0 3px 12px rgba(0,0,0,0.5);
+  --shadow: 0 18px 60px rgba(0, 0, 0, 0.6), 0 3px 12px rgba(0, 0, 0, 0.5);
 }
 
 * { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #cdd9ff55, transparent 60%),
+    radial-gradient(1000px 700px at 110% 120%, #ffd9c955, transparent 55%),
+    var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
 
 .window {
   width: 1080px;
@@ -45,11 +60,115 @@ html.dark {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* ---- Title bar ---- */
+.titlebar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 14px;
+  user-select: none;
+}
+.app-icon { width: 18px; height: 18px; }
+.title { font-size: 13px; color: var(--text-dim); }
+.winbtns { margin-left: auto; display: flex; height: 100%; }
+.winbtn {
+  width: 46px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+}
+.winbtn:hover { background: var(--hover); }
+.winbtn.close:hover { background: #e81123; color: #fff; }
+.winbtn svg { width: 11px; height: 11px; }
+.theme-toggle {
+  margin-left: 8px;
+  height: 26px;
+  padding: 0 12px;
+  align-self: center;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--pane);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.theme-toggle:hover { background: var(--hover); }
+
+/* ---- Command bar ---- */
+.toolbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 10px;
+}
+.tbtn {
+  height: 32px;
+  min-width: 36px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: default;
+}
+.tbtn:hover { background: var(--hover); }
+.tbtn svg { width: 16px; height: 16px; }
+.tbtn .caret { width: 9px; height: 9px; color: var(--text-dim); }
+.tsep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; }
+
+/* ---- Address bar ---- */
+.addressbar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 8px;
+}
+.crumbs {
+  flex: 1;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  background: var(--pane);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: default;
+}
+.crumb:hover { background: var(--hover); }
+.crumb-sep { color: var(--text-dim); display: inline-flex; padding: 0 2px; }
+
+/* ---- Two-pane body ---- */
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 0 10px 10px;
+}
+.splitter { width: 6px; cursor: col-resize; flex-shrink: 0; }
+
 .nav {
-  width: 290px;
+  flex: 1;
   background: var(--nav-bg);
   border: 1px solid var(--border);
   border-radius: 8px 0 0 8px;
@@ -67,6 +186,7 @@ html.dark {
   min-width: 0;
 }
 
+/* ---- Tree rows ---- */
 .trow {
   height: var(--row-h);
   display: flex;
@@ -91,21 +211,21 @@ html.dark {
 }
 .trow.open > .chev svg { transform: rotate(90deg); }
 
-.drow {
+.chev {
+  width: 22px;
+  height: 100%;
   display: grid;
-  grid-template-columns: 1fr 170px 130px 100px;
-  align-items: center;
-  height: 34px;
-  margin: 1px 6px;
-  border-radius: 5px;
-  cursor: default;
-  font-size: 13px;
+  place-items: center;
+  color: var(--chevron);
+  flex-shrink: 0;
 }
-.drow:hover { background: var(--hover); }
-.drow.selected { background: var(--accent-soft); }
-.drow .cell { padding: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.drow .name { display: flex; align-items: center; gap: 9px; }
+.chev svg { width: 10px; height: 10px; transition: transform 0.12s ease; }
+.chev.empty { visibility: hidden; }
 
+.ficon { width: 18px; height: 18px; margin-right: 8px; flex-shrink: 0; }
+.tname { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- Contents list ---- */
 .col-head {
   position: sticky;
   top: 0;
@@ -120,32 +240,22 @@ html.dark {
 .col-head > div { padding: 8px 12px; cursor: default; }
 .col-head > div:hover { background: var(--hover); }
 
-.crumbs {
-  flex: 1;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  padding: 0 6px;
-  background: var(--pane);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.chev {
-  width: 22px;
-  height: 100%;
+.drow {
   display: grid;
-  place-items: center;
-  color: var(--chevron);
-  flex-shrink: 0;
+  grid-template-columns: 1fr 170px 130px 100px;
+  align-items: center;
+  height: 34px;
+  margin: 1px 6px;
+  border-radius: 5px;
+  cursor: default;
+  font-size: 13px;
 }
-.chev svg { width: 10px; height: 10px; transition: transform .12s ease; }
-.chev.empty { visibility: hidden; }
-
-.ficon { width: 18px; height: 18px; margin-right: 8px; flex-shrink: 0; }
-
-.tname { font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.drow:hover { background: var(--hover); }
+.drow.selected { background: var(--accent-soft); }
+.drow .cell { padding: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drow .name { display: flex; align-items: center; gap: 9px; }
+.drow .name .ficon { margin: 0; }
+.dim { color: var(--text-dim); }
 
 .empty-state {
   height: 100%;
@@ -155,4 +265,16 @@ html.dark {
   font-size: 14px;
   text-align: center;
   padding: 40px;
+}
+
+/* ---- Status bar ---- */
+.statusbar {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
 }
