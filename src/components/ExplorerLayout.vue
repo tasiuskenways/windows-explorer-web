@@ -1,14 +1,25 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import type { Breadcrumb, FolderContents as FolderContentsData, SearchHit } from "@windows-explorer/contracts";
 import FolderTree from "./FolderTree.vue";
 import FolderContents from "./FolderContents.vue";
+import SearchResults from "./SearchResults.vue";
 import Breadcrumbs from "./Breadcrumbs.vue";
 import SearchBar from "./SearchBar.vue";
 
-defineProps<{ contents: FolderContentsData | null; trail: Breadcrumb[] }>();
-const emit = defineEmits<{ open: [id: string]; reveal: [hit: SearchHit] }>();
+const props = defineProps<{
+  query: string;
+  results: SearchHit[];
+  contents: FolderContentsData | null;
+  trail: Breadcrumb[];
+}>();
+const emit = defineEmits<{
+  open: [id: string];
+  "update:query": [value: string];
+  selectResult: [hit: SearchHit];
+}>();
 
+const searching = computed(() => props.query.trim().length > 0);
 const navWidth = ref(290);
 
 const onSplitterMousedown = (e: MouseEvent) => {
@@ -55,7 +66,7 @@ const toggleTheme = () => document.documentElement.classList.toggle("dark");
 
     <div class="addressbar">
       <Breadcrumbs :trail="trail" @navigate="emit('open', $event)" />
-      <SearchBar @reveal="emit('reveal', $event)" />
+      <SearchBar :model-value="query" @update:model-value="emit('update:query', $event)" />
     </div>
 
     <div class="body">
@@ -63,13 +74,23 @@ const toggleTheme = () => document.documentElement.classList.toggle("dark");
         <FolderTree @open="emit('open', $event)" />
       </div>
       <div class="splitter" @mousedown="onSplitterMousedown"></div>
-      <FolderContents :contents="contents" :loading="false" @open="emit('open', $event)" />
+      <SearchResults
+        v-if="searching"
+        :results="results"
+        :query="query"
+        @select="emit('selectResult', $event)"
+      />
+      <FolderContents
+        v-else
+        :contents="contents"
+        :loading="false"
+        @open="emit('open', $event)"
+      />
     </div>
 
     <div class="statusbar">
-      <span v-if="contents">
-        {{ contents.folder.subfolderCount + contents.folder.fileCount }} items
-      </span>
+      <span v-if="searching">{{ results.length }} result{{ results.length === 1 ? "" : "s" }}</span>
+      <span v-else-if="contents">{{ contents.folder.subfolderCount + contents.folder.fileCount }} items</span>
       <span v-else>0 items</span>
     </div>
   </div>
