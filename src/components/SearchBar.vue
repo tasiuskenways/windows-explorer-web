@@ -37,7 +37,29 @@ const { query, results } = useDebouncedSearch(
 <style scoped>
 .search {
   position: relative;
+  width: 230px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: var(--pane);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  flex-shrink: 0;
 }
+.search:focus-within { border-color: var(--accent); }
+.search svg { width: 14px; height: 14px; color: var(--text-dim); flex-shrink: 0; }
+.search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  width: 100%;
+}
+.search input::placeholder { color: var(--text-dim); }
 .search-results {
   position: absolute;
   top: 100%;

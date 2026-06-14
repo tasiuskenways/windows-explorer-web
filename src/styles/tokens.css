@@ -61,7 +61,9 @@ body {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.06);
+  user-select: none;
 }
+input { user-select: text; -webkit-user-select: text; }
 
 /* ---- Title bar ---- */
 .titlebar {
