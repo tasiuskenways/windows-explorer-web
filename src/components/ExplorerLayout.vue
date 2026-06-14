@@ -65,7 +65,8 @@ const toggleTheme = () => document.documentElement.classList.toggle("dark");
     </div>
 
     <div class="addressbar">
-      <Breadcrumbs :trail="trail" @navigate="emit('open', $event)" />
+      <div v-if="searching" class="crumbs"><span class="crumb">Search</span></div>
+      <Breadcrumbs v-else :trail="trail" @navigate="emit('open', $event)" />
       <SearchBar :model-value="query" @update:model-value="emit('update:query', $event)" />
     </div>
 

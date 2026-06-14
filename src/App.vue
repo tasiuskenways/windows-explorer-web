@@ -16,6 +16,7 @@ const { query, results } = useDebouncedSearch<SearchHit[]>((q, signal) =>
 );
 
 const open = async (id: string) => {
+  query.value = "";
   store.select(id);
   [contents.value, trail.value] = await Promise.all([
     api.getContents(id),
