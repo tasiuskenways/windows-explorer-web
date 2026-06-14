@@ -11,5 +11,6 @@ test("load, expand, view contents, search reveal", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Folder contents" })).toBeVisible();
 
   await page.getByRole("searchbox").fill("Folder");
-  await expect(page.locator(".search-results")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Search results" })).toBeVisible();
+  await expect(page.locator(".addressbar .crumb").filter({ hasText: "Search" })).toBeVisible();
 });
