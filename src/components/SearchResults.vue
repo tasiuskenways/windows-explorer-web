@@ -4,7 +4,6 @@ import FolderIcon from "./icons/FolderIcon.vue";
 import FileIcon from "./icons/FileIcon.vue";
 
 defineProps<{ results: SearchHit[]; query: string }>();
-const emit = defineEmits<{ select: [hit: SearchHit] }>();
 
 const extOf = (name: string) => {
   const dot = name.lastIndexOf(".");
