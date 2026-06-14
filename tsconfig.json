@@ -9,5 +9,6 @@
     "types": ["vitest/globals", "vite/client", "node"],
     "paths": { "@windows-explorer/contracts": ["./src/contracts.ts"] }
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["src/**/*.test.ts"]
 }
