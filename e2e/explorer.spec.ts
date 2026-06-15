@@ -110,3 +110,33 @@ test("renames folder and file rows from their context menus", async ({ page }) =
   await page.keyboard.press("Enter");
   await expect(page.getByText("notes.md")).toBeVisible();
 });
+
+test("keeps the explorer usable without horizontal overflow on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByRole("treeitem", { name: "Root" }).click();
+
+  await expect(page.getByRole("tree")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Folder contents" })).toBeVisible();
+  await expect(page.getByRole("searchbox")).toBeVisible();
+  await expect(page.getByText("readme.txt")).toBeVisible();
+
+  await expect.poll(
+    () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.body.scrollWidth <= window.innerWidth),
+  ).toBe(true);
+
+  await page.getByText("readme.txt").dispatchEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+    button: 2,
+    clientX: 388,
+    clientY: 842,
+  });
+  await expect(page.getByRole("menu")).toBeVisible();
+
+  const menuBox = await page.getByRole("menu").boundingBox();
+  expect(menuBox).not.toBeNull();
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(390);
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(844);
+});

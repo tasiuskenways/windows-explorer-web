@@ -52,4 +52,12 @@ const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 .search input::placeholder {
   color: var(--text-dim);
 }
+
+@media (max-width: 760px) {
+  .search {
+    width: 100%;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+}
 </style>

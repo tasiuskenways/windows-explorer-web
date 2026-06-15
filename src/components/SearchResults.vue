@@ -27,7 +27,7 @@ const typeOf = (hit: SearchHit) =>
         <div class="cell name">
           <FolderIcon v-if="hit.type === 'folder'" class="ficon" />
           <FileIcon v-else :extension="extOf(hit.name)" class="ficon" />
-          {{ hit.name }}
+          <span class="item-name">{{ hit.name }}</span>
         </div>
         <div class="cell dim">{{ locationOf(hit) }}</div>
         <div class="cell dim">{{ typeOf(hit) }}</div>
@@ -77,5 +77,42 @@ const typeOf = (hit: SearchHit) =>
 }
 .srow .name .ficon {
   margin: 0;
+}
+
+.item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .sr-head {
+    display: none;
+  }
+
+  .srow {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 2px;
+    height: auto;
+    min-height: 56px;
+    margin: 1px 4px;
+    padding: 7px 0;
+  }
+
+  .srow .cell {
+    padding: 0 10px;
+  }
+
+  .srow .name {
+    min-width: 0;
+  }
+
+  .srow .cell:nth-child(n + 2) {
+    padding-left: 40px;
+    font-size: 12px;
+    line-height: 16px;
+  }
 }
 </style>

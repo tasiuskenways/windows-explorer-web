@@ -25,6 +25,12 @@ const menu = ref<
   | { kind: "item"; type: "folder" | "file"; id: string; x: number; y: number }
   | null
 >(null);
+const MENU_MARGIN = 8;
+const MENU_WIDTH = 178;
+const MENU_HEIGHT = {
+  background: 76,
+  item: 42,
+} as const;
 const draftName = ref("");
 const renameInput = ref<HTMLInputElement | HTMLInputElement[] | null>(null);
 const renameTarget = computed(() => props.renameTarget ?? null);
@@ -49,12 +55,22 @@ watch(renameTarget, async (target) => {
 
 const isRenaming = (type: "folder" | "file", id: string) => renameTarget.value?.type === type && renameTarget.value.id === id;
 const closeMenu = () => { menu.value = null; };
+const clampMenuPosition = (event: MouseEvent, kind: "background" | "item") => {
+  const maxX = Math.max(MENU_MARGIN, window.innerWidth - MENU_WIDTH - MENU_MARGIN);
+  const maxY = Math.max(MENU_MARGIN, window.innerHeight - MENU_HEIGHT[kind] - MENU_MARGIN);
+  return {
+    x: Math.max(MENU_MARGIN, Math.min(event.clientX, maxX)),
+    y: Math.max(MENU_MARGIN, Math.min(event.clientY, maxY)),
+  };
+};
 const openMenu = (event: MouseEvent) => {
   if (!props.contents) return;
-  menu.value = { kind: "background", x: event.clientX, y: event.clientY };
+  const { x, y } = clampMenuPosition(event, "background");
+  menu.value = { kind: "background", x, y };
 };
 const openItemMenu = (event: MouseEvent, type: "folder" | "file", id: string) => {
-  menu.value = { kind: "item", type, id, x: event.clientX, y: event.clientY };
+  const { x, y } = clampMenuPosition(event, "item");
+  menu.value = { kind: "item", type, id, x, y };
 };
 const emitCreate = (type: "folder" | "file") => {
   closeMenu();
@@ -132,7 +148,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
             @keydown="onRenameKeydown"
           >
           <template v-else>
-            {{ f.name }}
+            <span class="item-name">{{ f.name }}</span>
           </template>
         </div>
         <div class="cell dim">
@@ -166,7 +182,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
             @keydown="onRenameKeydown"
           >
           <template v-else>
-            {{ file.name }}
+            <span class="item-name">{{ file.name }}</span>
           </template>
         </div>
         <div class="cell dim">
@@ -223,6 +239,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
 <style scoped>
 .rename-input {
   width: min(320px, 100%);
+  min-width: 0;
   height: 24px;
   border: 1px solid var(--accent);
   border-radius: 3px;
@@ -237,6 +254,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
   position: fixed;
   z-index: 50;
   min-width: 178px;
+  max-width: calc(100vw - 16px);
   padding: 4px;
   border: 1px solid var(--border);
   border-radius: 7px;
@@ -246,6 +264,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
 
 .context-menu button {
   width: 100%;
+  min-width: 0;
   height: 30px;
   display: flex;
   align-items: center;
@@ -268,5 +287,12 @@ const onRenameKeydown = (event: KeyboardEvent) => {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+.item-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

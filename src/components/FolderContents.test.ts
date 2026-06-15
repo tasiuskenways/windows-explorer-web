@@ -1,4 +1,4 @@
-import { test, expect } from "vitest";
+import { afterEach, test, expect, vi } from "vitest";
 import { fireEvent, render } from "@testing-library/vue";
 import FolderContents from "./FolderContents.vue";
 
@@ -7,6 +7,10 @@ const contents = {
   folders: { data: [{ id: "c", parentId: "r", name: "Child", depth: 1, subfolderCount: 0, fileCount: 0, hasChildren: false, updatedAt: "2026-01-01T00:00:00.000Z" }], pageInfo: { hasMore: false, nextCursor: null } },
   files: { data: [{ id: "f", folderId: "r", name: "a.txt", extension: "txt", sizeBytes: 2048, updatedAt: "2026-01-01T00:00:00.000Z" }], pageInfo: { hasMore: false, nextCursor: null } },
 };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 test("lists folders then files with a human-readable size", () => {
   const { getByText } = render(FolderContents, { props: { contents, loading: false } });
@@ -27,6 +31,18 @@ test("opens a creation context menu from right click", async () => {
   expect(getByRole("menu")).toBeTruthy();
   await fireEvent.click(getByRole("menuitem", { name: "New folder" }));
   expect(emitted()["create-folder"]).toBeTruthy();
+});
+
+test("keeps the context menu inside a narrow viewport", async () => {
+  vi.stubGlobal("innerWidth", 220);
+  vi.stubGlobal("innerHeight", 160);
+
+  const { getByLabelText, getByRole } = render(FolderContents, { props: { contents, loading: false } });
+  await fireEvent.contextMenu(getByLabelText("Folder contents"), { clientX: 400, clientY: 300 });
+
+  const menu = getByRole("menu") as HTMLElement;
+  expect(menu.style.left).toBe("34px");
+  expect(menu.style.top).toBe("76px");
 });
 
 test("right clicking a folder row opens a rename-only context menu", async () => {
