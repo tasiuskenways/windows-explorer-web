@@ -17,6 +17,8 @@ export const useExplorerStore = (api: ApiClient = defaultApi) =>
     const selectedId = ref<string | null>(null);
 
     const merge = (list: Folder[]) => { for (const f of list) nodes.value.set(f.id, f); };
+    const sortIds = (ids: string[]) =>
+      ids.sort((a, b) => (nodes.value.get(a)?.name ?? "").localeCompare(nodes.value.get(b)?.name ?? ""));
 
     const loadRoots = async () => {
       const res = await api.getRoots();
@@ -44,6 +46,20 @@ export const useExplorerStore = (api: ApiClient = defaultApi) =>
 
     const select = (id: string) => { selectedId.value = id; };
 
+    const addFolderToParent = (folder: Folder) => {
+      nodes.value.set(folder.id, folder);
+      const target = folder.parentId === null ? rootIds.value : childrenByParent.value.get(folder.parentId);
+      if (!target || target.includes(folder.id)) return;
+      target.push(folder.id);
+      sortIds(target);
+    };
+
+    const renameFolderInCache = (folder: Folder) => {
+      nodes.value.set(folder.id, folder);
+      const target = folder.parentId === null ? rootIds.value : childrenByParent.value.get(folder.parentId);
+      if (target) sortIds(target);
+    };
+
     const revealPath = async (ancestorIds: string[], targetId: string) => {
       for (const id of ancestorIds) {
         await loadChildren(id);
@@ -65,5 +81,5 @@ export const useExplorerStore = (api: ApiClient = defaultApi) =>
     });
 
     return { nodes, childrenByParent, rootIds, expanded, loadingChildren, selectedId,
-      loadRoots, loadChildren, expand, select, revealPath, visibleRows };
+      loadRoots, loadChildren, expand, select, addFolderToParent, renameFolderInCache, revealPath, visibleRows };
   })();

@@ -7,16 +7,25 @@ import SearchResults from "./SearchResults.vue";
 import Breadcrumbs from "./Breadcrumbs.vue";
 import SearchBar from "./SearchBar.vue";
 
+type RenameTarget = { type: "folder" | "file"; id: string } | null;
+
 const props = defineProps<{
   query: string;
   results: SearchHit[];
   contents: FolderContentsData | null;
   trail: Breadcrumb[];
+  renameTarget: RenameTarget;
 }>();
 const emit = defineEmits<{
   open: [id: string];
   "update:query": [value: string];
   selectResult: [hit: SearchHit];
+  "create-folder": [];
+  "create-file": [];
+  "begin-rename": [type: "folder" | "file", id: string];
+  "rename-folder": [id: string, name: string];
+  "rename-file": [id: string, name: string];
+  "cancel-rename": [];
 }>();
 
 const searching = computed(() => props.query.trim().length > 0);
@@ -85,7 +94,14 @@ const toggleTheme = () => document.documentElement.classList.toggle("dark");
         v-else
         :contents="contents"
         :loading="false"
+        :rename-target="renameTarget"
         @open="emit('open', $event)"
+        @create-folder="emit('create-folder')"
+        @create-file="emit('create-file')"
+        @begin-rename="(type, id) => emit('begin-rename', type, id)"
+        @rename-folder="(id, name) => emit('rename-folder', id, name)"
+        @rename-file="(id, name) => emit('rename-file', id, name)"
+        @cancel-rename="emit('cancel-rename')"
       />
     </div>
 

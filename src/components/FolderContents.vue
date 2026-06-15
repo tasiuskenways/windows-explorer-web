@@ -1,34 +1,272 @@
 <script setup lang="ts">
 import type { FolderContents } from "@windows-explorer/contracts";
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import FolderIcon from "./icons/FolderIcon.vue";
 import FileIcon from "./icons/FileIcon.vue";
 import { formatSize } from "../lib/format.ts";
 
-const props = defineProps<{ contents: FolderContents | null; loading: boolean }>();
-const emit = defineEmits<{ open: [id: string] }>();
+type RenameTarget = { type: "folder" | "file"; id: string } | null;
+
+const props = defineProps<{ contents: FolderContents | null; loading: boolean; renameTarget?: RenameTarget }>();
+const emit = defineEmits<{
+  open: [id: string];
+  "create-folder": [];
+  "create-file": [];
+  "begin-rename": [type: "folder" | "file", id: string];
+  "rename-folder": [id: string, name: string];
+  "rename-file": [id: string, name: string];
+  "cancel-rename": [];
+}>();
 const isEmpty = computed(() => props.contents && props.contents.folders.data.length === 0 && props.contents.files.data.length === 0);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
+
+const menu = ref<
+  | { kind: "background"; x: number; y: number }
+  | { kind: "item"; type: "folder" | "file"; id: string; x: number; y: number }
+  | null
+>(null);
+const draftName = ref("");
+const renameInput = ref<HTMLInputElement | HTMLInputElement[] | null>(null);
+const renameTarget = computed(() => props.renameTarget ?? null);
+const renameFinished = ref(false);
+
+const currentRenameName = () => {
+  if (!props.contents || !renameTarget.value) return "";
+  return renameTarget.value.type === "folder"
+    ? props.contents.folders.data.find((f) => f.id === renameTarget.value?.id)?.name ?? ""
+    : props.contents.files.data.find((f) => f.id === renameTarget.value?.id)?.name ?? "";
+};
+
+watch(renameTarget, async (target) => {
+  renameFinished.value = false;
+  if (!target) return;
+  draftName.value = currentRenameName();
+  await nextTick();
+  const input = Array.isArray(renameInput.value) ? renameInput.value[0] : renameInput.value;
+  input?.focus();
+  input?.select();
+}, { immediate: true });
+
+const isRenaming = (type: "folder" | "file", id: string) => renameTarget.value?.type === type && renameTarget.value.id === id;
+const closeMenu = () => { menu.value = null; };
+const openMenu = (event: MouseEvent) => {
+  if (!props.contents) return;
+  menu.value = { kind: "background", x: event.clientX, y: event.clientY };
+};
+const openItemMenu = (event: MouseEvent, type: "folder" | "file", id: string) => {
+  menu.value = { kind: "item", type, id, x: event.clientX, y: event.clientY };
+};
+const emitCreate = (type: "folder" | "file") => {
+  closeMenu();
+  if (type === "folder") emit("create-folder");
+  else emit("create-file");
+};
+const beginRename = () => {
+  if (!menu.value || menu.value.kind !== "item") return;
+  const { type, id } = menu.value;
+  closeMenu();
+  emit("begin-rename", type, id);
+};
+const cancelRename = () => {
+  if (renameFinished.value) return;
+  renameFinished.value = true;
+  emit("cancel-rename");
+};
+const commitRename = () => {
+  const target = renameTarget.value;
+  if (!target || renameFinished.value) return;
+  const name = draftName.value.trim();
+  renameFinished.value = true;
+  if (!name) { emit("cancel-rename"); return; }
+  if (target.type === "folder") emit("rename-folder", target.id, name);
+  else emit("rename-file", target.id, name);
+};
+const onRenameKeydown = (event: KeyboardEvent) => {
+  if (event.key === "Enter") { event.preventDefault(); commitRename(); }
+  if (event.key === "Escape") { event.preventDefault(); cancelRename(); }
+};
 </script>
 
 <template>
-  <div class="content" role="region" aria-label="Folder contents">
-    <div v-if="!contents" class="empty-state">Pick a folder on the left. Its subfolders and files appear here.</div>
-    <div v-else-if="isEmpty" class="empty-state">This folder is empty.</div>
+  <div
+    class="content"
+    role="region"
+    aria-label="Folder contents"
+    @contextmenu.prevent="openMenu"
+    @click="closeMenu"
+  >
+    <div
+      v-if="!contents"
+      class="empty-state"
+    >
+      Pick a folder on the left. Its subfolders and files appear here.
+    </div>
+    <div
+      v-else-if="isEmpty"
+      class="empty-state"
+    >
+      This folder is empty.
+    </div>
     <template v-else>
-      <div class="col-head"><div>Name</div><div>Date modified</div><div>Type</div><div>Size</div></div>
-      <div v-for="f in contents.folders.data" :key="f.id" class="drow" @dblclick="emit('open', f.id)">
-        <div class="cell name"><FolderIcon class="ficon" />{{ f.name }}</div>
-        <div class="cell dim">{{ fmtDate(f.updatedAt) }}</div>
-        <div class="cell dim">File folder</div>
-        <div class="cell dim"></div>
+      <div class="col-head">
+        <div>Name</div><div>Date modified</div><div>Type</div><div>Size</div>
       </div>
-      <div v-for="file in contents.files.data" :key="file.id" class="drow">
-        <div class="cell name"><FileIcon :extension="file.extension" class="ficon" />{{ file.name }}</div>
-        <div class="cell dim">{{ fmtDate(file.updatedAt) }}</div>
-        <div class="cell dim">{{ (file.extension ?? "file").toUpperCase() }} File</div>
-        <div class="cell dim">{{ formatSize(file.sizeBytes) }}</div>
+      <div
+        v-for="f in contents.folders.data"
+        :key="f.id"
+        class="drow"
+        :class="{ selected: isRenaming('folder', f.id) }"
+        @contextmenu.stop.prevent="openItemMenu($event, 'folder', f.id)"
+        @dblclick="emit('open', f.id)"
+      >
+        <div class="cell name">
+          <FolderIcon class="ficon" />
+          <input
+            v-if="isRenaming('folder', f.id)"
+            ref="renameInput"
+            v-model="draftName"
+            class="rename-input"
+            aria-label="Rename folder"
+            @click.stop
+            @blur="commitRename"
+            @keydown="onRenameKeydown"
+          >
+          <template v-else>
+            {{ f.name }}
+          </template>
+        </div>
+        <div class="cell dim">
+          {{ fmtDate(f.updatedAt) }}
+        </div>
+        <div class="cell dim">
+          File folder
+        </div>
+        <div class="cell dim" />
+      </div>
+      <div
+        v-for="file in contents.files.data"
+        :key="file.id"
+        class="drow"
+        :class="{ selected: isRenaming('file', file.id) }"
+        @contextmenu.stop.prevent="openItemMenu($event, 'file', file.id)"
+      >
+        <div class="cell name">
+          <FileIcon
+            :extension="file.extension"
+            class="ficon"
+          />
+          <input
+            v-if="isRenaming('file', file.id)"
+            ref="renameInput"
+            v-model="draftName"
+            class="rename-input"
+            aria-label="Rename file"
+            @click.stop
+            @blur="commitRename"
+            @keydown="onRenameKeydown"
+          >
+          <template v-else>
+            {{ file.name }}
+          </template>
+        </div>
+        <div class="cell dim">
+          {{ fmtDate(file.updatedAt) }}
+        </div>
+        <div class="cell dim">
+          {{ (file.extension ?? "file").toUpperCase() }} File
+        </div>
+        <div class="cell dim">
+          {{ formatSize(file.sizeBytes) }}
+        </div>
       </div>
     </template>
+    <div
+      v-if="menu"
+      class="context-menu"
+      role="menu"
+      :style="{ left: `${menu.x}px`, top: `${menu.y}px` }"
+      @click.stop
+    >
+      <template v-if="menu.kind === 'background'">
+        <button
+          type="button"
+          role="menuitem"
+          @click="emitCreate('folder')"
+        >
+          <FolderIcon class="menu-icon" />
+          New folder
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          @click="emitCreate('file')"
+        >
+          <FileIcon
+            extension="txt"
+            class="menu-icon"
+          />
+          New file
+        </button>
+      </template>
+      <button
+        v-else
+        type="button"
+        role="menuitem"
+        @click="beginRename"
+      >
+        Rename
+      </button>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.rename-input {
+  width: min(320px, 100%);
+  height: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: var(--pane);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 1px 5px;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 178px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--pane);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.context-menu button {
+  width: 100%;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: default;
+}
+
+.context-menu button:hover {
+  background: var(--hover);
+}
+
+.menu-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+</style>

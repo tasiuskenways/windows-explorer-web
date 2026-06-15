@@ -38,3 +38,20 @@ test("visibleRows flattens expanded nodes with depth", async () => {
   await store.expand("r");
   expect(store.visibleRows.map((r) => [r.node.id, r.depth])).toEqual([["r", 0], ["c", 1]]);
 });
+
+test("addFolderToParent inserts a created child into an already loaded branch", async () => {
+  const store = useExplorerStore(api);
+  await store.loadRoots();
+  await store.expand("r");
+  store.addFolderToParent(folder("n", "r", "New folder"));
+  expect(store.childrenByParent.get("r")).toEqual(["c", "n"]);
+  expect(store.nodes.get("n")!.name).toBe("New folder");
+});
+
+test("renameFolderInCache updates visible folder names", async () => {
+  const store = useExplorerStore(api);
+  await store.loadRoots();
+  await store.expand("r");
+  store.renameFolderInCache(folder("c", "r", "Reports"));
+  expect(store.nodes.get("c")!.name).toBe("Reports");
+});
