@@ -119,8 +119,11 @@ input { user-select: text; -webkit-user-select: text; }
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  border: 0;
   border-radius: 6px;
+  background: transparent;
   color: var(--text);
+  font: inherit;
   font-size: 13px;
   cursor: default;
 }
@@ -332,7 +335,7 @@ input { user-select: text; -webkit-user-select: text; }
   .toolbar {
     height: auto;
     min-height: 44px;
-    overflow-x: auto;
+    overflow: visible;
     padding: 6px 8px;
   }
 

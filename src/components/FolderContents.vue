@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import type { FolderContents } from "@windows-explorer/contracts";
+import type { FileItem, Folder, FolderContents } from "@windows-explorer/contracts";
 import { computed, nextTick, ref, watch } from "vue";
 import FolderIcon from "./icons/FolderIcon.vue";
 import FileIcon from "./icons/FileIcon.vue";
 import { formatSize } from "../lib/format.ts";
 
 type RenameTarget = { type: "folder" | "file"; id: string } | null;
+type SortKey = "name" | "date" | "type" | "size";
+type SortDirection = "asc" | "desc";
 
-const props = defineProps<{ contents: FolderContents | null; loading: boolean; renameTarget?: RenameTarget }>();
+const props = defineProps<{
+  contents: FolderContents | null;
+  loading: boolean;
+  renameTarget?: RenameTarget;
+  sortKey?: SortKey;
+  sortDirection?: SortDirection;
+}>();
 const emit = defineEmits<{
   open: [id: string];
   "create-folder": [];
@@ -19,6 +27,34 @@ const emit = defineEmits<{
 }>();
 const isEmpty = computed(() => props.contents && props.contents.folders.data.length === 0 && props.contents.files.data.length === 0);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
+const fileType = (file: FileItem) => `${(file.extension ?? "file").toUpperCase()} File`;
+const sortKey = computed(() => props.sortKey ?? "name");
+const sortDirection = computed(() => props.sortDirection ?? "asc");
+const directionMultiplier = computed(() => sortDirection.value === "asc" ? 1 : -1);
+
+const compareText = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+const compareValues = (a: string | number, b: string | number) => {
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return compareText(String(a), String(b));
+};
+const folderSortValue = (folder: Folder) => {
+  if (sortKey.value === "date") return Date.parse(folder.updatedAt);
+  if (sortKey.value === "type") return "File folder";
+  if (sortKey.value === "size") return 0;
+  return folder.name;
+};
+const fileSortValue = (file: FileItem) => {
+  if (sortKey.value === "date") return Date.parse(file.updatedAt);
+  if (sortKey.value === "type") return fileType(file);
+  if (sortKey.value === "size") return file.sizeBytes;
+  return file.name;
+};
+const compareFolders = (a: Folder, b: Folder) =>
+  (compareValues(folderSortValue(a), folderSortValue(b)) * directionMultiplier.value) || compareText(a.name, b.name);
+const compareFiles = (a: FileItem, b: FileItem) =>
+  (compareValues(fileSortValue(a), fileSortValue(b)) * directionMultiplier.value) || compareText(a.name, b.name);
+const sortedFolders = computed(() => [...(props.contents?.folders.data ?? [])].sort(compareFolders));
+const sortedFiles = computed(() => [...(props.contents?.files.data ?? [])].sort(compareFiles));
 
 const menu = ref<
   | { kind: "background"; x: number; y: number }
@@ -128,7 +164,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
         <div>Name</div><div>Date modified</div><div>Type</div><div>Size</div>
       </div>
       <div
-        v-for="f in contents.folders.data"
+        v-for="f in sortedFolders"
         :key="f.id"
         class="drow"
         :class="{ selected: isRenaming('folder', f.id) }"
@@ -160,7 +196,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
         <div class="cell dim" />
       </div>
       <div
-        v-for="file in contents.files.data"
+        v-for="file in sortedFiles"
         :key="file.id"
         class="drow"
         :class="{ selected: isRenaming('file', file.id) }"
@@ -189,7 +225,7 @@ const onRenameKeydown = (event: KeyboardEvent) => {
           {{ fmtDate(file.updatedAt) }}
         </div>
         <div class="cell dim">
-          {{ (file.extension ?? "file").toUpperCase() }} File
+          {{ fileType(file) }}
         </div>
         <div class="cell dim">
           {{ formatSize(file.sizeBytes) }}

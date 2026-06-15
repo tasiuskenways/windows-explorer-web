@@ -28,6 +28,24 @@ const file = {
   sizeBytes: 1024,
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
+const newFolder = {
+  id: "00000000-0000-7000-8000-000000000004",
+  parentId: root.id,
+  name: "New folder",
+  depth: 1,
+  subfolderCount: 0,
+  fileCount: 0,
+  hasChildren: false,
+  updatedAt: "2026-01-04T00:00:00.000Z",
+};
+const newFile = {
+  id: "00000000-0000-7000-8000-000000000005",
+  folderId: root.id,
+  name: "New Text Document.txt",
+  extension: "txt",
+  sizeBytes: 0,
+  updatedAt: "2026-01-05T00:00:00.000Z",
+};
 
 const pageInfo = { hasMore: false, nextCursor: null };
 const json = (body: unknown) => ({
@@ -74,6 +92,14 @@ test.beforeEach(async ({ page }) => {
       await route.fulfill(json({ data: { ...file, name: "notes.md", extension: "md" } }));
       return;
     }
+    if (method === "POST" && path === `/folders/${root.id}/folders`) {
+      await route.fulfill(json({ data: newFolder }));
+      return;
+    }
+    if (method === "POST" && path === `/folders/${root.id}/files`) {
+      await route.fulfill(json({ data: newFile }));
+      return;
+    }
 
     await route.fulfill(json({ data: [], pageInfo }));
   });
@@ -109,6 +135,31 @@ test("renames folder and file rows from their context menus", async ({ page }) =
   await page.getByLabel("Rename file").fill("notes.md");
   await page.keyboard.press("Enter");
   await expect(page.getByText("notes.md")).toBeVisible();
+});
+
+test("creates items and sorts from the toolbar", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("treeitem", { name: "Root" }).click();
+
+  await page.getByRole("button", { name: "New" }).click();
+  await page.getByRole("menuitem", { name: "New folder" }).click();
+  await expect(page.getByLabel("Rename folder")).toHaveValue("New folder");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "New" }).click();
+  await page.getByRole("menuitem", { name: "New file" }).click();
+  await expect(page.getByLabel("Rename file")).toHaveValue("New Text Document.txt");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Sort" }).click();
+  await page.getByRole("menuitem", { name: "Size" }).click();
+
+  await expect.poll(() => page.locator(".drow .item-name").allTextContents()).toEqual([
+    "Child",
+    "New folder",
+    "New Text Document.txt",
+    "readme.txt",
+  ]);
 });
 
 test("keeps the explorer usable without horizontal overflow on mobile", async ({ page }) => {
