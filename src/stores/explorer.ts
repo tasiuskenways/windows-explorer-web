@@ -60,6 +60,42 @@ export const useExplorerStore = (api: ApiClient = defaultApi) =>
       if (target) sortIds(target);
     };
 
+    const removeFolderFromCache = (id: string) => {
+      const folder = nodes.value.get(id);
+      const idsToRemove = new Set<string>();
+      const collect = (folderId: string) => {
+        idsToRemove.add(folderId);
+        for (const childId of childrenByParent.value.get(folderId) ?? []) collect(childId);
+      };
+      collect(id);
+
+      for (const folderId of idsToRemove) {
+        nodes.value.delete(folderId);
+        childrenByParent.value.delete(folderId);
+        expanded.value.delete(folderId);
+        loadingChildren.value.delete(folderId);
+      }
+
+      const siblings = folder?.parentId === null
+        ? rootIds.value
+        : folder?.parentId
+          ? childrenByParent.value.get(folder.parentId)
+          : undefined;
+      if (siblings) {
+        const index = siblings.indexOf(id);
+        if (index !== -1) siblings.splice(index, 1);
+      }
+      if (folder?.parentId) {
+        const parent = nodes.value.get(folder.parentId);
+        if (parent) {
+          const subfolderCount = Math.max(parent.subfolderCount - 1, 0);
+          nodes.value.set(parent.id, { ...parent, subfolderCount, hasChildren: subfolderCount > 0 });
+        }
+      }
+
+      if (selectedId.value && idsToRemove.has(selectedId.value)) selectedId.value = folder?.parentId ?? null;
+    };
+
     const revealPath = async (ancestorIds: string[], targetId: string) => {
       for (const id of ancestorIds) {
         await loadChildren(id);
@@ -81,5 +117,5 @@ export const useExplorerStore = (api: ApiClient = defaultApi) =>
     });
 
     return { nodes, childrenByParent, rootIds, expanded, loadingChildren, selectedId,
-      loadRoots, loadChildren, expand, select, addFolderToParent, renameFolderInCache, revealPath, visibleRows };
+      loadRoots, loadChildren, expand, select, addFolderToParent, renameFolderInCache, removeFolderFromCache, revealPath, visibleRows };
   })();

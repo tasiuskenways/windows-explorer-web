@@ -45,22 +45,52 @@ test("keeps the context menu inside a narrow viewport", async () => {
   expect(menu.style.top).toBe("76px");
 });
 
-test("right clicking a folder row opens a rename-only context menu", async () => {
+test("right clicking a folder row opens item actions", async () => {
   const { getByText, getByRole, queryByRole, emitted } = render(FolderContents, { props: { contents, loading: false } });
   await fireEvent.contextMenu(getByText("Child"));
   expect(getByRole("menuitem", { name: "Rename" })).toBeTruthy();
+  expect(getByRole("menuitem", { name: "Delete" })).toBeTruthy();
   expect(queryByRole("menuitem", { name: "New folder" })).toBeNull();
   await fireEvent.click(getByRole("menuitem", { name: "Rename" }));
   expect(emitted()["begin-rename"][0]).toEqual(["folder", "c"]);
 });
 
-test("right clicking a file row opens a rename-only context menu", async () => {
+test("right clicking a file row opens item actions", async () => {
   const { getByText, getByRole, queryByRole, emitted } = render(FolderContents, { props: { contents, loading: false } });
   await fireEvent.contextMenu(getByText("a.txt"));
   expect(getByRole("menuitem", { name: "Rename" })).toBeTruthy();
+  expect(getByRole("menuitem", { name: "Delete" })).toBeTruthy();
   expect(queryByRole("menuitem", { name: "New file" })).toBeNull();
   await fireEvent.click(getByRole("menuitem", { name: "Rename" }));
   expect(emitted()["begin-rename"][0]).toEqual(["file", "f"]);
+});
+
+test("opens a custom folder delete confirmation and emits after confirmation", async () => {
+  const { getByText, getByRole, emitted } = render(FolderContents, { props: { contents, loading: false } });
+
+  await fireEvent.contextMenu(getByText("Child"));
+  await fireEvent.click(getByRole("menuitem", { name: "Delete" }));
+
+  expect(getByRole("dialog", { name: "Delete folder" })).toBeTruthy();
+  expect(getByText('Delete "Child"?')).toBeTruthy();
+  expect(emitted()["delete-folder"]).toBeUndefined();
+
+  await fireEvent.click(getByRole("button", { name: "Delete" }));
+  expect(emitted()["delete-folder"][0]).toEqual(["c"]);
+});
+
+test("does not emit file delete when the custom confirmation is cancelled", async () => {
+  const { getByText, getByRole, queryByRole, emitted } = render(FolderContents, { props: { contents, loading: false } });
+
+  await fireEvent.contextMenu(getByText("a.txt"));
+  await fireEvent.click(getByRole("menuitem", { name: "Delete" }));
+
+  expect(getByRole("dialog", { name: "Delete file" })).toBeTruthy();
+  expect(getByText('Delete "a.txt"?')).toBeTruthy();
+  await fireEvent.click(getByRole("button", { name: "Cancel" }));
+
+  expect(queryByRole("dialog")).toBeNull();
+  expect(emitted()["delete-file"]).toBeUndefined();
 });
 
 test("commits inline folder rename on Enter", async () => {

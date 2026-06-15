@@ -6,6 +6,7 @@ import FileIcon from "./icons/FileIcon.vue";
 import { formatSize } from "../lib/format.ts";
 
 type RenameTarget = { type: "folder" | "file"; id: string } | null;
+type DeleteTarget = { type: "folder" | "file"; id: string; name: string } | null;
 type SortKey = "name" | "date" | "type" | "size";
 type SortDirection = "asc" | "desc";
 
@@ -23,6 +24,8 @@ const emit = defineEmits<{
   "begin-rename": [type: "folder" | "file", id: string];
   "rename-folder": [id: string, name: string];
   "rename-file": [id: string, name: string];
+  "delete-folder": [id: string];
+  "delete-file": [id: string];
   "cancel-rename": [];
 }>();
 const isEmpty = computed(() => props.contents && props.contents.folders.data.length === 0 && props.contents.files.data.length === 0);
@@ -65,12 +68,14 @@ const MENU_MARGIN = 8;
 const MENU_WIDTH = 178;
 const MENU_HEIGHT = {
   background: 76,
-  item: 42,
+  item: 76,
 } as const;
 const draftName = ref("");
 const renameInput = ref<HTMLInputElement | HTMLInputElement[] | null>(null);
 const renameTarget = computed(() => props.renameTarget ?? null);
 const renameFinished = ref(false);
+const deleteTarget = ref<DeleteTarget>(null);
+const deleteDialogTitle = computed(() => deleteTarget.value ? `Delete ${deleteTarget.value.type}` : "Delete item");
 
 const currentRenameName = () => {
   if (!props.contents || !renameTarget.value) return "";
@@ -118,6 +123,30 @@ const beginRename = () => {
   const { type, id } = menu.value;
   closeMenu();
   emit("begin-rename", type, id);
+};
+const currentMenuItemName = () => {
+  if (!props.contents || !menu.value || menu.value.kind !== "item") return "";
+  const item = menu.value;
+  return item.type === "folder"
+    ? props.contents.folders.data.find((f) => f.id === item.id)?.name ?? ""
+    : props.contents.files.data.find((f) => f.id === item.id)?.name ?? "";
+};
+const deleteItem = () => {
+  if (!menu.value || menu.value.kind !== "item") return;
+  const { type, id } = menu.value;
+  const name = currentMenuItemName();
+  closeMenu();
+  deleteTarget.value = { type, id, name };
+};
+const cancelDelete = () => {
+  deleteTarget.value = null;
+};
+const confirmDelete = () => {
+  const target = deleteTarget.value;
+  if (!target) return;
+  deleteTarget.value = null;
+  if (target.type === "folder") emit("delete-folder", target.id);
+  else emit("delete-file", target.id);
 };
 const cancelRename = () => {
   if (renameFinished.value) return;
@@ -260,14 +289,60 @@ const onRenameKeydown = (event: KeyboardEvent) => {
           New file
         </button>
       </template>
-      <button
-        v-else
-        type="button"
-        role="menuitem"
-        @click="beginRename"
+      <template v-else>
+        <button
+          type="button"
+          role="menuitem"
+          @click="beginRename"
+        >
+          Rename
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          class="danger"
+          @click="deleteItem"
+        >
+          Delete
+        </button>
+      </template>
+    </div>
+    <div
+      v-if="deleteTarget"
+      class="confirm-backdrop"
+      @click.stop="cancelDelete"
+    >
+      <section
+        class="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="deleteDialogTitle"
+        @click.stop
+        @keydown.esc="cancelDelete"
       >
-        Rename
-      </button>
+        <h2 class="confirm-title">
+          {{ deleteDialogTitle }}
+        </h2>
+        <p class="confirm-message">
+          Delete "{{ deleteTarget.name }}"?
+        </p>
+        <div class="confirm-actions">
+          <button
+            type="button"
+            class="secondary-action"
+            @click="cancelDelete"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="danger-action"
+            @click="confirmDelete"
+          >
+            Delete
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -317,6 +392,81 @@ const onRenameKeydown = (event: KeyboardEvent) => {
 
 .context-menu button:hover {
   background: var(--hover);
+}
+
+.context-menu button.danger {
+  color: var(--danger, #b42318);
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.confirm-dialog {
+  width: min(360px, calc(100vw - 32px));
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--pane);
+  color: var(--text);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  padding: 18px;
+}
+
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirm-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.confirm-actions button {
+  min-width: 76px;
+  height: 32px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  font: inherit;
+  font-size: 13px;
+  cursor: default;
+}
+
+.secondary-action {
+  background: var(--pane);
+  color: var(--text);
+}
+
+.secondary-action:hover {
+  background: var(--hover);
+}
+
+.danger-action {
+  border-color: #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.danger-action:hover {
+  background: #9f1f15;
 }
 
 .menu-icon {

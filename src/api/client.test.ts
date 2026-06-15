@@ -40,3 +40,21 @@ test("renameFile patches the nested file route", async () => {
   }));
   expect(file.extension).toBe("md");
 });
+
+test("deleteFolder calls the folder delete endpoint without parsing a 204 body", async () => {
+  const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+  const api = createApiClient("http://api", fetchMock as unknown as typeof fetch);
+  await api.deleteFolder("c");
+  expect(fetchMock).toHaveBeenCalledWith("http://api/folders/c", expect.objectContaining({
+    method: "DELETE",
+  }));
+});
+
+test("deleteFile calls the nested file delete endpoint", async () => {
+  const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+  const api = createApiClient("http://api", fetchMock as unknown as typeof fetch);
+  await api.deleteFile("r", "f");
+  expect(fetchMock).toHaveBeenCalledWith("http://api/folders/r/files/f", expect.objectContaining({
+    method: "DELETE",
+  }));
+});

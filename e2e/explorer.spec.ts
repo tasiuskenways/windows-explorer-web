@@ -100,6 +100,14 @@ test.beforeEach(async ({ page }) => {
       await route.fulfill(json({ data: newFile }));
       return;
     }
+    if (method === "DELETE" && path === `/folders/${child.id}`) {
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    if (method === "DELETE" && path === `/folders/${root.id}/files/${file.id}`) {
+      await route.fulfill({ status: 204 });
+      return;
+    }
 
     await route.fulfill(json({ data: [], pageInfo }));
   });
@@ -160,6 +168,26 @@ test("creates items and sorts from the toolbar", async ({ page }) => {
     "New Text Document.txt",
     "readme.txt",
   ]);
+});
+
+test("deletes folder and file rows from their context menus", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("treeitem", { name: "Root" }).click();
+
+  const contents = page.getByRole("region", { name: "Folder contents" });
+  await contents.getByText("Child").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(page.getByRole("dialog", { name: "Delete folder" })).toBeVisible();
+  await expect(page.getByText('Delete "Child"?')).toBeVisible();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(contents.getByText("Child")).toBeHidden();
+
+  await contents.getByText("readme.txt").click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(page.getByRole("dialog", { name: "Delete file" })).toBeVisible();
+  await expect(page.getByText('Delete "readme.txt"?')).toBeVisible();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(contents.getByText("readme.txt")).toBeHidden();
 });
 
 test("keeps the explorer usable without horizontal overflow on mobile", async ({ page }) => {

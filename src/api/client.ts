@@ -18,6 +18,16 @@ export const createApiClient = (baseUrl: string, fetchFn: typeof fetch = fetch) 
   const get = <T>(path: string, signal?: AbortSignal): Promise<T> => request<T>(path, {}, signal);
   const write = async <T>(path: string, method: "POST" | "PATCH", body: Record<string, unknown>) =>
     (await request<{ data: T }>(path, { method, body: JSON.stringify(body) })).data;
+  const remove = async (path: string) => {
+    const res = await fetchFn(`${baseUrl}${path}`, {
+      method: "DELETE",
+      headers: { accept: "application/json" },
+    });
+    if (res.ok) return;
+    const body = await res.json().catch(() => null);
+    const code = body?.error?.code ?? "UNKNOWN";
+    throw new ApiError(code, `${code}: ${body?.error?.message ?? res.statusText}`);
+  };
   const page = (limit = 100, cursor?: string) => `limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
 
   return {
@@ -32,6 +42,8 @@ export const createApiClient = (baseUrl: string, fetchFn: typeof fetch = fetch) 
     createFile: (folderId: string, name?: string) => write<FileItem>(`/folders/${folderId}/files`, "POST", name ? { name } : {}),
     renameFolder: (id: string, name: string) => write<Folder>(`/folders/${id}`, "PATCH", { name }),
     renameFile: (folderId: string, id: string, name: string) => write<FileItem>(`/folders/${folderId}/files/${id}`, "PATCH", { name }),
+    deleteFolder: (id: string) => remove(`/folders/${id}`),
+    deleteFile: (folderId: string, id: string) => remove(`/folders/${folderId}/files/${id}`),
   };
 };
 export type ApiClient = ReturnType<typeof createApiClient>;

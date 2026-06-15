@@ -113,6 +113,43 @@ const renameFile = async (id: string, name: string) => {
   renameTarget.value = null;
 };
 
+const deleteFolder = async (id: string) => {
+  if (!contents.value) return;
+  await api.deleteFolder(id);
+  const subfolderCount = Math.max(contents.value.folder.subfolderCount - 1, 0);
+  contents.value = {
+    ...contents.value,
+    folder: {
+      ...contents.value.folder,
+      subfolderCount,
+      hasChildren: subfolderCount > 0,
+    },
+    folders: {
+      ...contents.value.folders,
+      data: contents.value.folders.data.filter((f) => f.id !== id),
+    },
+  };
+  store.removeFolderFromCache(id);
+  if (renameTarget.value?.id === id) renameTarget.value = null;
+};
+
+const deleteFile = async (id: string) => {
+  if (!contents.value) return;
+  await api.deleteFile(contents.value.folder.id, id);
+  contents.value = {
+    ...contents.value,
+    folder: {
+      ...contents.value.folder,
+      fileCount: Math.max(contents.value.folder.fileCount - 1, 0),
+    },
+    files: {
+      ...contents.value.files,
+      data: contents.value.files.data.filter((file) => file.id !== id),
+    },
+  };
+  if (renameTarget.value?.id === id) renameTarget.value = null;
+};
+
 const cancelRename = () => { renameTarget.value = null; };
 
 onMounted(() => store.loadRoots());
@@ -133,6 +170,8 @@ onMounted(() => store.loadRoots());
     @begin-rename="beginRename"
     @rename-folder="renameFolder"
     @rename-file="renameFile"
+    @delete-folder="deleteFolder"
+    @delete-file="deleteFile"
     @cancel-rename="cancelRename"
   />
 </template>

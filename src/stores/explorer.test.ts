@@ -55,3 +55,22 @@ test("renameFolderInCache updates visible folder names", async () => {
   store.renameFolderInCache(folder("c", "r", "Reports"));
   expect(store.nodes.get("c")!.name).toBe("Reports");
 });
+
+test("removeFolderFromCache removes a cached subtree and updates parent metadata", async () => {
+  const store = useExplorerStore(api);
+  await store.loadRoots();
+  await store.expand("r");
+  store.addFolderToParent(folder("g", "c", "Grandchild"));
+  store.childrenByParent.set("c", ["g"]);
+  store.expanded.add("c");
+  store.select("g");
+
+  store.removeFolderFromCache("c");
+
+  expect(store.childrenByParent.get("r")).toEqual([]);
+  expect(store.nodes.has("c")).toBe(false);
+  expect(store.nodes.has("g")).toBe(false);
+  expect(store.expanded.has("c")).toBe(false);
+  expect(store.selectedId).toBe("r");
+  expect(store.nodes.get("r")!.hasChildren).toBe(false);
+});

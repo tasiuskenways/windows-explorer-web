@@ -27,6 +27,8 @@ const emit = defineEmits<{
   "begin-rename": [type: "folder" | "file", id: string];
   "rename-folder": [id: string, name: string];
   "rename-file": [id: string, name: string];
+  "delete-folder": [id: string];
+  "delete-file": [id: string];
   "cancel-rename": [];
 }>();
 
@@ -197,6 +199,8 @@ const chooseSort = (key: SortKey) => {
         @begin-rename="(type, id) => emit('begin-rename', type, id)"
         @rename-folder="(id, name) => emit('rename-folder', id, name)"
         @rename-file="(id, name) => emit('rename-file', id, name)"
+        @delete-folder="emit('delete-folder', $event)"
+        @delete-file="emit('delete-file', $event)"
         @cancel-rename="emit('cancel-rename')"
       />
     </div>
